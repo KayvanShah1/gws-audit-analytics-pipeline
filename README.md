@@ -122,7 +122,7 @@ flowchart LR
 
 **Short answer:** measure real lateness from your own runs, then set overlap to the high-percentile delay plus a small safety pad (e.g., +1–2 min).
 
-**Data-driven, iterative method (your 10-run approach):**
+**Data-driven, iterative method (N-run approach):**
 
 1. **Run N jobs without overlap** (e.g., hourly, N≈10). Each run *i* queries `[start_i, end_i]` and emits a **per-run** JSONL snapshot (`epr_…jsonl.gz`).
 2. For each run *i*, compute:
@@ -139,10 +139,7 @@ flowchart LR
    * Use 95–99th percentile for stability; set `safety_pad_minutes` to 1–2.
 5. (Optional) If you also want a **forward guard band** (rarely needed), add `ceil(percentile(late_gap, 95))`.
 
-> Why not `(min - start) + (end - max)`?
-> That expression can go negative and mixes two directions. Using `max(0, …)` keeps gaps positive and interpretable. For overlap, **early\_gap** is the key metric—those are the events you’d otherwise miss without a backward overlap.
-
-**Rule of thumb to start:** If you don’t have history yet, use **3–5 minutes**. After a few days, recompute the percentile and tighten/loosen as needed.
+> If you don’t have history yet, use **3–5 minutes**. After a few days, recompute the percentile and tighten/loosen as needed.
 
 
 ## ✅ Assumptions & Safeguards
