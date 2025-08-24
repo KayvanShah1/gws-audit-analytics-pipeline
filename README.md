@@ -19,6 +19,55 @@ This project is designed to:
 ```bash
 📡 Google Admin API → 🧩 Fetcher → 📂 Raw JSONL / 📝 Per-Run Logs → 🛠️ Apache Beam → 🧱 Parquet Files → 🔍 Polars → 📊 Final Insights
 ```
+```mermaid
+---
+config:
+  theme: mc
+  layout: elk
+---
+flowchart TD
+    A["Google Admin SDK Reports API"]
+
+    subgraph GCP["Google Cloud Platform"]
+      direction LR
+
+      subgraph ING["Ingestion"]
+        R1["Cloud Run or Cloud Functions Fetcher Python OAuth2"]
+        CLOG["Cloud Logging"]
+      end
+
+      subgraph STG["Storage"]
+        GCSRAW["GCS raw YYYY MM DD part HH jsonl gz"]
+        GCSPR["GCS per run epr TIMESTAMP jsonl gz"]
+        GCSPARQ["GCS processed DATE part parquet"]
+      end
+
+      subgraph PROC["Processing and ETL"]
+        DF["Dataflow Apache Beam Runner DataflowRunner"]
+        MLOG["Cloud Monitoring"]
+      end
+
+      subgraph ANA["Analytics"]
+        POLARS["Polars job or notebook 48h insights"]
+        BI["Optional BigQuery or Looker"]
+      end
+    end
+
+    A -->|"tokenActivity list"| R1
+    R1 -->|"Fetch with 3 min overlap"| GCSRAW
+    R1 -->|"Write per run snapshot"| GCSPR
+    R1 --> CLOG
+
+    GCSRAW -->|"Read last 48h by event time"| DF
+    DF -->|"Dedup by unique id Partition by date"| GCSPARQ
+    DF --> MLOG
+    DF --> CLOG
+
+    GCSPARQ --> POLARS
+    POLARS -->|"Top user and top method bytes"| POLARS
+
+    GCSPARQ -.->|"optional load"| BI
+```
 
 ### 1. **Fetcher**
 
@@ -46,6 +95,27 @@ This project is designed to:
 * Computes:
   * **Top user** by event count.
   * **Top method_name** by total bytes returned.
+ 
+### Pipeline with DataFlow Runner portable to SparkRunner
+```mermaid
+flowchart LR
+    subgraph JOB["Beam Pipeline on Dataflow"]
+      direction LR
+      A1["ReadFromGCS raw STAR jsonl gz window last 48h"]
+      A2["Parse JSONL to models Pydantic"]
+      A3["Filter by event time strict 48h"]
+      A4["Key by unique id"]
+      A5["Deduplicate Distinct or CombinePerKey"]
+      A6["Partition by date of event time"]
+      A7["WriteToParquet processed DATE part parquet"]
+
+      A1 --> A2 --> A3 --> A4 --> A5 --> A6 --> A7
+    end
+
+    A2 -.-> L1["Dead letter parse errors Cloud Logging"]
+    A5 -.-> L2["Duplicate stats metrics Cloud Monitoring"]
+```
+
 
 ## ✅ Assumptions & Safeguards
 
@@ -54,7 +124,6 @@ This project is designed to:
 * Deduplication is based on `unique_id` to prevent duplicate counting.
 * Processing logic is based on **event time**, not fetch time, to align with actual user activity.
 * Only events from the **last 48 hours (from last run)** are processed and analyzed.
-
 ---
 
 ## 📁 Folder Structure
