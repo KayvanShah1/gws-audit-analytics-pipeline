@@ -215,17 +215,15 @@ unzip takehome.zip -d takehome
 ```
 > Copy the `creds.json` file and paste it into the root folder of the project
 
-### 2. Create and Activate Conda Environment
+### 2. Create Python Environment
 > Come back to the root folder
 ```bash
-conda env create -f environment.yml
-conda activate gws-analyzer
+uv sync
 ```
-
-> If you're building from scratch:
-
+OR
 ```bash
-conda create -n gws-analyzer python=3.12
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
