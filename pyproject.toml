@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "apache-beam>=2.69.0",
+    "dagster>=1.12.1",
     "google-auth>=2.43.0",
     "pandas>=2.3.3",
     "polars>=1.35.2",
@@ -17,6 +18,8 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "dagster-dg-cli>=1.12.1",
+    "dagster-webserver>=1.12.1",
     "pytest>=9.0.0",
 ]
 
@@ -26,3 +29,12 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 force-include = { "pyproject.toml" = "pyproject.toml" }
+
+[tool.dg]
+directory_type = "project"
+
+[tool.dg.project]
+root_module = "gws-token-activity-analyzer"
+registry_modules = [
+    "gws-token-activity-analyzer.components.*",
+]
