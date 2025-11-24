@@ -3,7 +3,7 @@ name = "gws-token-activity-audit-pipeline"
 version = "0.1.0"
 description = "Google Workspace Token Activity Audit Pipeline"
 readme = "README.md"
-requires-python = ">=3.9,<3.14"
+requires-python = ">=3.12"
 license = "MIT"
 keywords = ["google workspace", "dagster", "data pipeline", "audit", "token activity", "dbt"]
 authors = [{ name = "Kayvan Shah", email = "kayvan.taiyo@gmail.com" }]
@@ -20,6 +20,8 @@ classifiers = [
 dependencies = [
     "apache-beam>=2.69.0",
     "dagster>=1.12.1",
+    "dagster-dbt>=0.28.1",
+    "dbt-core>=1.10.8",
     "google-auth>=2.43.0",
     "pandas>=2.3.3",
     "polars>=1.35.2",
