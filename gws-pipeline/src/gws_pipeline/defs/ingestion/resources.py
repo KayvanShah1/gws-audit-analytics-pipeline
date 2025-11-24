@@ -13,7 +13,7 @@ from gws_pipeline.core.fetcher import load_last_run_timestamp, save_last_run_tim
 
 
 class GoogleReportsAPIResource(ConfigurableResource):
-    service_account_file: str = settings.creds_file
+    service_account_file: str = str(settings.creds_file)
     subject: str = settings.subject
     scopes: List[str] = ["https://www.googleapis.com/auth/admin.reports.audit.readonly"]
     backoff_factor: float = 1.0
@@ -40,7 +40,11 @@ class GoogleReportsAPIResource(ConfigurableResource):
 
 
 class StateFileResource(ConfigurableResource):
-    path: str = settings.state_file_fetcher
+    path: str = str(settings.state_file_fetcher)
+
+    @property
+    def path_obj(self) -> Path:
+        return Path(self.path)
 
     def load_last_run(self) -> datetime:
         return load_last_run_timestamp(Path(self.path))
