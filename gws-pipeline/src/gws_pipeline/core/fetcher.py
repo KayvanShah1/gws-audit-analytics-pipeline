@@ -33,8 +33,8 @@ def load_last_run_timestamp(state_path: Path) -> datetime:
         return ts
 
     with open(state_path, "r") as f:
-        ts = datetime.fromisoformat(json.load(f)["last_run"]) - timedelta(minutes=settings.OVERLAP_MINUTES)
-
+        ts = datetime.fromisoformat(json.load(f)["last_run"]) - timedelta(minutes=settings.BACKWARD_OVERLAP_MINUTES)
+        logger.info(f"Loaded last run timestamp: {ts.isoformat()}")
     return ts
 
 
