@@ -10,15 +10,22 @@ from google.oauth2.service_account import Credentials
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
-from .config import get_logger, settings
-from .models import ActivityPathParams, ActivityQueryParams, RunSnapshot
-from .utils import get_relative_path, timed_run
+from gws_pipeline.core import get_logger, settings
+from gws_pipeline.core.models import ActivityPathParams, ActivityQueryParams, RunSnapshot
+from gws_pipeline.core.utils import get_relative_path, timed_run
 
 logger = get_logger("TokenActivityFetcher")
 
 
 # --- State handling ---
 def load_last_run_timestamp(state_path: Path) -> datetime:
+    """Load the last run timestamp from the given state file.
+    If the file does not exist, return a fallback timestamp (now - DEFAULT_DELTA_HRS).
+    Args:
+        state_path (Path): Path to the state file
+    Returns:
+        datetime: Last run timestamp with overlap applied
+    """
     # First run fallback to 48 hours ago
     if not state_path.exists():
         ts = datetime.now(timezone.utc) - timedelta(hours=settings.DEFAULT_DELTA_HRS)
@@ -32,6 +39,11 @@ def load_last_run_timestamp(state_path: Path) -> datetime:
 
 
 def save_last_run_timestamp(state_path: Path, timestamp: datetime):
+    """Persist the last run timestamp to the given state file.
+    Args:
+        state_path (Path): Path to the state file
+        timestamp (datetime): Timestamp to save
+    """
     state_path.parent.mkdir(parents=True, exist_ok=True)
     with open(state_path, "w") as f:
         json.dump({"last_run": timestamp.isoformat()}, f)
@@ -44,13 +56,27 @@ def write_run_snapshot(snapshot: RunSnapshot, path: Path) -> None:
 
 
 # --- Partitioning ---
-def get_partition_path(event_time: datetime) -> Path:
+def get_partition_path(event_time: datetime, window_idx: int) -> Path:
+    """Returns a partitioned file path for the given event time.
+
+    Args:
+        event_time (datetime): Event timestamp
+        window_idx (int): Fetch window index
+
+    Returns:
+        Path: Partitioned file path like 'YYYY-MM-DD/part_HH_wX.jsonl'
+    """
     date_part = event_time.strftime("%Y-%m-%d")
     hour_part = event_time.strftime("%H")
-    return Path(date_part) / f"part_{hour_part}.jsonl"
+    return Path(date_part) / f"part_{hour_part}_w{window_idx}.jsonl"
 
 
 def flush_buffer(buffer: List[dict], file_path: Path):
+    """Flush the given buffer of events to the specified file path.
+    Args:
+        buffer (List[dict]): List of event dicts to write
+        file_path (Path): Destination file path
+    """
     if settings.USE_GZIP:
         file_path = file_path.with_suffix(file_path.suffix + ".gz")
         file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -62,25 +88,35 @@ def flush_buffer(buffer: List[dict], file_path: Path):
         with open(file_path, "a", encoding="utf-8") as f:
             for event in buffer:
                 f.write(json.dumps(event) + "\n")
-    # logger.info(f"Flushed {len(buffer)} events to {get_relative_path(file_path)}")
 
 
-def split_time_range(start: datetime, end: datetime, chunk_hours: int) -> List[Tuple[datetime, datetime]]:
-    """Split [start, end] into contiguous windows of size chunk_hours."""
-    min_span = timedelta(milliseconds=10)
+def split_time_range(start: datetime, end: datetime, chunk_hours: int) -> List[Tuple[int, datetime, datetime]]:
+    """Split [start, end] into contiguous windows of size chunk_hours.
+
+    Args:
+        start (datetime): Start of the time range
+        end (datetime): End of the time range
+        chunk_hours (int): Size of each chunk in hours
+
+    Returns a list of (window_index, window_start, window_end) tuples.
+    """
+    min_span = timedelta(seconds=1)
     windows: List[Tuple[datetime, datetime]] = []
     current = start
+    widx = 0
     while current < end:
         next_chunk = min(current + timedelta(hours=chunk_hours), end)
         if (next_chunk - current) < min_span:
             break
-        windows.append((current, next_chunk))
+        windows.append((widx, current, next_chunk))
         current = next_chunk
+        widx += 1
     return windows
 
 
 # --- Fetching token activity ---
 def create_retry_session(creds: Credentials) -> AuthorizedSession:
+    """Create an AuthorizedSession with retry strategy for transient errors."""
     session = AuthorizedSession(creds)
     retry_strategy = Retry(
         total=5,
@@ -95,6 +131,12 @@ def create_retry_session(creds: Credentials) -> AuthorizedSession:
 
 @timed_run
 def fetch_token_activity_buffered():
+    """Fetch token activity events from Google Workspace API with buffered writes.
+
+    This function fetches events from the last recorded run timestamp to now,
+    buffering writes to partitioned files and a per-run log file.
+    It updates the last run timestamp upon completion.
+    """
     run_start_time = datetime.now(timezone.utc)
     creds = Credentials.from_service_account_file(
         str(settings.creds_file),
@@ -182,6 +224,7 @@ def fetch_window_to_files(
     start: datetime,
     end: datetime,
     raw_data_dir: Path,
+    window_idx: int,
 ) -> Tuple[int, Optional[datetime], Optional[datetime]]:
     """
     Fetch token activity events for a single [start, end] window and write:
@@ -189,8 +232,16 @@ def fetch_window_to_files(
       • partitioned hourly JSONL(.gz) files under `raw_data_dir`
       • a per-run gzipped JSONL file under `per_run_dir`
 
+    Args:
+        session (AuthorizedSession): Authorized HTTP session
+        start (datetime): Start of the fetch window
+        end (datetime): End of the fetch window
+        raw_data_dir (Path): Base directory for raw data files
+        window_idx (int): Index of the fetch window
+
     Returns:
-        (num_events, earliest_event_time, latest_event_time)
+        Tuple[int, Optional[datetime], Optional[datetime]]: Number of events fetched,
+        earliest event time, latest event time
     """
     path_params = ActivityPathParams()
     path = path_params.get_path()
@@ -220,7 +271,7 @@ def fetch_window_to_files(
             if latest_event_time is None or event_time > latest_event_time:
                 latest_event_time = event_time
 
-            partition_path = get_partition_path(event_time)
+            partition_path = get_partition_path(event_time, window_idx)
             partition_buffers[partition_path].append(event)
 
             # flush partition buffer if large enough
