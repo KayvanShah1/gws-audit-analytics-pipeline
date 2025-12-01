@@ -10,6 +10,7 @@ from urllib3 import Retry
 
 from gws_pipeline.core import settings
 from gws_pipeline.core.fetcher import load_last_run_timestamp, save_last_run_timestamp
+from gws_pipeline.core.models import Application
 
 
 class GoogleReportsAPIResource(ConfigurableResource):
@@ -40,14 +41,11 @@ class GoogleReportsAPIResource(ConfigurableResource):
 
 
 class StateFileResource(ConfigurableResource):
-    path: str = str(settings.state_file_fetcher)
+    def path_obj(self, application: Application) -> Path:
+        return settings.state_dir / f"{application.value.lower()}.json"
 
-    @property
-    def path_obj(self) -> Path:
-        return Path(self.path)
+    def load_last_run(self, application: Application) -> datetime:
+        return load_last_run_timestamp(self.path_obj(application))
 
-    def load_last_run(self) -> datetime:
-        return load_last_run_timestamp(Path(self.path))
-
-    def save_last_run(self, ts: datetime):
-        save_last_run_timestamp(Path(self.path), ts)
+    def save_last_run(self, ts: datetime, application: Application):
+        save_last_run_timestamp(self.path_obj(application), ts)
