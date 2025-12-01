@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 
@@ -6,6 +7,16 @@ from dagster import AssetExecutionContext, MetadataValue, asset
 from gws_pipeline.core import settings
 from gws_pipeline.core.fetcher import fetch_window_to_files, split_time_range, window_hours_for, write_run_snapshot
 from gws_pipeline.core.models import Application, RunSnapshot, WindowRange
+
+
+@dataclass
+class WindowResult:
+    window_idx: int
+    start: datetime
+    end: datetime
+    num_events: int
+    earliest_event_time: Optional[datetime]
+    latest_event_time: Optional[datetime]
 
 
 def _run_raw_activity_incremental(context: AssetExecutionContext, application: Application) -> None:
@@ -25,7 +36,7 @@ def _run_raw_activity_incremental(context: AssetExecutionContext, application: A
     context.log.info(
         f"[{application.value}] Incremental run: {len(windows)} windows from "
         f"{last_run.isoformat()} to {now.isoformat()} "
-        f"({settings.WINDOW_HOURS}-hour chunks)."
+        f"({chunk_hours}-hour chunks)."
     )
 
     session = google_reports_api.get_session()
@@ -44,30 +55,41 @@ def _run_raw_activity_incremental(context: AssetExecutionContext, application: A
             raw_data_dir=settings.raw_data_dir / application.value.lower(),
             window_idx=w_idx,
         )
-        return num_events, w_start, w_end, earliest_event_time, latest_event_time
+        return WindowResult(
+            window_idx=w_idx,
+            start=w_start,
+            end=w_end,
+            num_events=num_events,
+            earliest_event_time=earliest_event_time,
+            latest_event_time=latest_event_time,
+        )
 
     # 2) Run windows in parallel
-    results: List[Tuple[int, datetime, datetime, Optional[datetime], Optional[datetime]]] = []
+    results: List[WindowResult] = []
     with ThreadPoolExecutor(max_workers=settings.MAX_PARALLEL_WINDOWS) as pool:
         futures = [pool.submit(process_window, w) for w in windows]
         for fut in futures:
-            num_events, w_start, w_end, earliest_event_time, latest_event_time = fut.result()
+            res = fut.result()
 
-            if num_events == 0:
+            if res.num_events == 0:
                 continue
-            total_events += num_events
 
-            earliest_event_time_global = (
-                earliest_event_time
-                if earliest_event_time_global is None
-                else min(earliest_event_time_global, earliest_event_time)
-            )
-            latest_event_time_global = (
-                latest_event_time
-                if latest_event_time_global is None
-                else max(latest_event_time_global, latest_event_time)
-            )
-            results.append((num_events, w_start, w_end, earliest_event_time, latest_event_time))
+            total_events += res.num_events
+
+            if res.earliest_event_time is not None:
+                earliest_event_time_global = (
+                    res.earliest_event_time
+                    if earliest_event_time_global is None
+                    else min(earliest_event_time_global, res.earliest_event_time)
+                )
+            if res.latest_event_time is not None:
+                latest_event_time_global = (
+                    res.latest_event_time
+                    if latest_event_time_global is None
+                    else max(latest_event_time_global, res.latest_event_time)
+                )
+
+            results.append(res)
 
     # Write per-run snapshot if enabled
     if settings.WRITE_SNAPSHOT:
@@ -82,7 +104,7 @@ def _run_raw_activity_incremental(context: AssetExecutionContext, application: A
             num_events=total_events,
             earliest_event_time=earliest_event_time_global,
             latest_event_time=latest_event_time_global,
-            windows=[WindowRange(start=res[1], end=res[2]) for res in results],
+            windows=[WindowRange(idx=res.window_idx, start=res.start, end=res.end) for res in results],
         )
         write_run_snapshot(snapshot, snapshot_path)
 
@@ -101,7 +123,7 @@ def _run_raw_activity_incremental(context: AssetExecutionContext, application: A
             "last_run_before": MetadataValue.text(last_run.isoformat()),
             "run_until": MetadataValue.text(now.isoformat()),
             "num_windows": MetadataValue.int(len(windows)),
-            "window_hours": MetadataValue.int(settings.WINDOW_HOURS),
+            "window_hours": MetadataValue.int(chunk_hours),
             "max_parallel_windows": MetadataValue.int(settings.MAX_PARALLEL_WINDOWS),
             "total_events": MetadataValue.int(total_events),
             "earliest_window_start": MetadataValue.text(earliest_window_start.isoformat()),
