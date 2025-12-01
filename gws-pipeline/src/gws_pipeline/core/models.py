@@ -10,6 +10,7 @@ class Application(str, Enum):
     LOGIN = "login"
     SAML = "saml"
     ADMIN = "admin"
+    DRIVE = "drive"
 
 
 # --- Pydantic model for API path and query params ---
