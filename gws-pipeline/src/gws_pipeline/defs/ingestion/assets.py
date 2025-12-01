@@ -50,14 +50,16 @@ def _run_raw_activity_incremental(context: AssetExecutionContext, application: A
         futures = [pool.submit(process_window, w) for w in windows]
         for fut in futures:
             num_events, w_start, w_end, earliest_event_time, latest_event_time = fut.result()
+
+            if num_events == 0:
+                continue
             total_events += num_events
 
-            if earliest_event_time:
-                earliest_event_time_global = (
-                    earliest_event_time
-                    if earliest_event_time_global is None
-                    else min(earliest_event_time_global, earliest_event_time)
-                )
+            earliest_event_time_global = (
+                earliest_event_time
+                if earliest_event_time_global is None
+                else min(earliest_event_time_global, earliest_event_time)
+            )
             latest_event_time_global = (
                 latest_event_time
                 if latest_event_time_global is None
@@ -148,3 +150,13 @@ def raw_saml_activity_incremental(context: AssetExecutionContext) -> None:
 )
 def raw_admin_activity_incremental(context: AssetExecutionContext) -> None:
     _run_raw_activity_incremental(context, Application.ADMIN)
+
+
+@asset(
+    name="raw_drive_activity_incremental",
+    required_resource_keys={"google_reports_api", "state_file"},
+    group_name="Ingestion",
+    description="Incrementally fetches DRIVE activity and writes raw JSONL files.",
+)
+def raw_drive_activity_incremental(context: AssetExecutionContext) -> None:
+    _run_raw_activity_incremental(context, Application.DRIVE)
