@@ -4,6 +4,7 @@ from gws_pipeline.defs.ingestion.assets import (
     raw_login_activity_incremental,
     raw_saml_activity_incremental,
     raw_admin_activity_incremental,
+    raw_drive_activity_incremental,
 )
 from gws_pipeline.defs.ingestion.resources import GoogleReportsAPIResource, StateFileResource
 from gws_pipeline.defs.processing.assets import process_events
@@ -15,6 +16,7 @@ defs = Definitions(
         raw_login_activity_incremental,
         raw_saml_activity_incremental,
         raw_admin_activity_incremental,
+        raw_drive_activity_incremental,
         process_events,
     ],
     resources={
