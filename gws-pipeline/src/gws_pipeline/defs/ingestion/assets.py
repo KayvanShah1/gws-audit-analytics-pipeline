@@ -1,11 +1,17 @@
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 from dagster import AssetExecutionContext, MetadataValue, asset
 from gws_pipeline.core import settings
-from gws_pipeline.core.fetcher import fetch_window_to_files, split_time_range, window_hours_for, write_run_snapshot
+from gws_pipeline.core.fetcher import (
+    fetch_window_to_files,
+    split_time_range,
+    window_hours_for,
+    write_run_snapshot,
+    Window,
+)
 from gws_pipeline.core.models import Application, RunSnapshot, WindowRange
 
 
@@ -40,25 +46,24 @@ def _run_raw_activity_incremental(context: AssetExecutionContext, application: A
     )
 
     session = google_reports_api.get_session()
-    earliest_window_start = windows[0][1]
+    earliest_window_start = windows[0].start
     latest_event_time_global = earliest_event_time_global = None
     total_events = 0
 
-    def process_window(window: Tuple[int, datetime, datetime]):
-        w_idx, w_start, w_end = window
-        context.log.info(f"[{application.value}] Fetching window {w_start.isoformat()} -> {w_end.isoformat()}")
+    def process_window(w: Window) -> WindowResult:
+        context.log.info(f"[{application.value}] Fetching window {w.start.isoformat()} -> {w.end.isoformat()}")
         num_events, earliest_event_time, latest_event_time = fetch_window_to_files(
             session=session,
             application=application,
-            start=w_start,
-            end=w_end,
+            start=w.start,
+            end=w.end,
             raw_data_dir=settings.raw_data_dir / application.value.lower(),
-            window_idx=w_idx,
+            window_idx=w.idx,
         )
         return WindowResult(
-            window_idx=w_idx,
-            start=w_start,
-            end=w_end,
+            window_idx=w.idx,
+            start=w.start,
+            end=w.end,
             num_events=num_events,
             earliest_event_time=earliest_event_time,
             latest_event_time=latest_event_time,
@@ -136,51 +141,17 @@ def _run_raw_activity_incremental(context: AssetExecutionContext, application: A
     context.log.info(f"[{application.value}] Incremental fetch completed: {total_events} events fetched in total.")
 
 
-@asset(
-    name="raw_token_activity_incremental",
-    required_resource_keys={"google_reports_api", "state_file"},
-    group_name="Ingestion",
-    description="Incrementally fetches TOKEN activity and writes raw JSONL files.",
-)
-def raw_token_activity_incremental(context: AssetExecutionContext) -> None:
-    _run_raw_activity_incremental(context, Application.TOKEN)
+def make_incremental_asset(app: Application):
+    @asset(
+        name=f"{app.value.lower()}_raw_inc",
+        required_resource_keys={"google_reports_api", "state_file"},
+        group_name="Ingestion",
+        description=f"Incrementally fetches {app.value} activity and writes raw JSONL files.",
+    )
+    def _asset(context: AssetExecutionContext):
+        _run_raw_activity_incremental(context, app)
+
+    return _asset
 
 
-@asset(
-    name="raw_login_activity_incremental",
-    required_resource_keys={"google_reports_api", "state_file"},
-    group_name="Ingestion",
-    description="Incrementally fetches LOGIN activity and writes raw JSONL files.",
-)
-def raw_login_activity_incremental(context: AssetExecutionContext) -> None:
-    _run_raw_activity_incremental(context, Application.LOGIN)
-
-
-@asset(
-    name="raw_saml_activity_incremental",
-    required_resource_keys={"google_reports_api", "state_file"},
-    group_name="Ingestion",
-    description="Incrementally fetches SAML activity and writes raw JSONL files.",
-)
-def raw_saml_activity_incremental(context: AssetExecutionContext) -> None:
-    _run_raw_activity_incremental(context, Application.SAML)
-
-
-@asset(
-    name="raw_admin_activity_incremental",
-    required_resource_keys={"google_reports_api", "state_file"},
-    group_name="Ingestion",
-    description="Incrementally fetches ADMIN activity and writes raw JSONL files.",
-)
-def raw_admin_activity_incremental(context: AssetExecutionContext) -> None:
-    _run_raw_activity_incremental(context, Application.ADMIN)
-
-
-@asset(
-    name="raw_drive_activity_incremental",
-    required_resource_keys={"google_reports_api", "state_file"},
-    group_name="Ingestion",
-    description="Incrementally fetches DRIVE activity and writes raw JSONL files.",
-)
-def raw_drive_activity_incremental(context: AssetExecutionContext) -> None:
-    _run_raw_activity_incremental(context, Application.DRIVE)
+incremental_assets = [make_incremental_asset(app) for app in Application]
