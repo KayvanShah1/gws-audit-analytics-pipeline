@@ -10,7 +10,8 @@ from urllib3 import Retry
 
 from gws_pipeline.core import settings
 from gws_pipeline.core.fetcher import load_last_run_timestamp, save_last_run_timestamp
-from gws_pipeline.core.models import Application
+from gws_pipeline.core.state import get_processor_cursor, update_processor_state
+from gws_pipeline.core.schemas.fetcher import Application
 
 
 class GoogleReportsAPIResource(ConfigurableResource):
@@ -47,5 +48,15 @@ class StateFileResource(ConfigurableResource):
     def load_last_run(self, application: Application) -> datetime:
         return load_last_run_timestamp(self.path_obj(application))
 
-    def save_last_run(self, ts: datetime, application: Application):
-        save_last_run_timestamp(self.path_obj(application), ts)
+    def save_last_run(
+        self, ts: datetime, application: Application, run_id: str | None = None, snapshot_path: Path | None = None
+    ):
+        save_last_run_timestamp(self.path_obj(application), ts, run_id=run_id, snapshot_path=snapshot_path)
+
+    def load_last_processed(self, application: Application):
+        return get_processor_cursor(self.path_obj(application))
+
+    def save_last_processed(
+        self, ts: datetime, application: Application, run_id: str | None = None, status: str = "success"
+    ):
+        update_processor_state(self.path_obj(application), ts, run_id=run_id, status=status)
