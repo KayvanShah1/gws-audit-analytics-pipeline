@@ -13,7 +13,7 @@ def make_processing_asset(app: Application):
         group_name="Processing",
         deps=[AssetKey(f"{app.value.lower()}_raw_inc")],
         description=f"Processes {app.value} raw JSONL into Parquet events (and scopes for token).",
-        compute_kind="python",
+        kinds=["python", "polars"],
     )
     def _asset(context: AssetExecutionContext) -> None:
         events_count, scopes_count = process_recent_activity(app)
