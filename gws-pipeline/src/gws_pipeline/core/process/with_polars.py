@@ -143,10 +143,12 @@ def _earliest_partition_datetime(app: Application) -> Optional[datetime]:
 def _write_parquet(
     partitions: Dict[str, List[dict]], out_dir: Path, prefix: str, schema: pa.Schema | None = None
 ) -> None:
+    """Write partitioned records to Parquet files under out_dir with given prefix."""
     out_dir.mkdir(parents=True, exist_ok=True)
     for date_key, rows in partitions.items():
         if not rows:
             continue
+        # Validate against schema if provided
         table = pa.Table.from_pylist(rows, schema=schema) if schema else pa.Table.from_pylist(rows)
         out_path = out_dir / f"{prefix}_{date_key}.parquet"
         pq.write_table(table, out_path, compression="snappy")
@@ -159,6 +161,7 @@ def _write_parquet(
 
 
 def _make_run_id() -> str:
+    """Generate a run ID based on current timestamp."""
     return datetime.now(settings.DEFAULT_TIMEZONE).strftime("%Y%m%dT%H%M%S")
 
 
@@ -213,6 +216,7 @@ def _iter_date_batches(start: date, end: date, batch_days: int) -> Iterable[Tupl
 
 
 def _write_event_partitions(app: Application, events: List[dict]) -> None:
+    """Write event records to Parquet partitions."""
     partitions = _partition_by_date(events)
     event_dir = settings.processed_data_dir / app.value.lower() / "events"
     schema = EVENT_SCHEMA_BY_APP.get(app)
@@ -220,6 +224,7 @@ def _write_event_partitions(app: Application, events: List[dict]) -> None:
 
 
 def _write_scope_partitions(app: Application, scopes: List[dict]) -> int:
+    """Write scope records to Parquet partitions. Returns number of scopes written."""
     partitions = _partition_by_date(scopes)
     scope_dir = settings.processed_data_dir / app.value.lower() / "event_scopes"
     schema = SCOPE_SCHEMA_BY_APP.get(app)

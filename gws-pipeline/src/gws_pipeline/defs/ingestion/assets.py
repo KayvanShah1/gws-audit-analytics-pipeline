@@ -29,6 +29,7 @@ def _run_raw_activity_incremental(context: AssetExecutionContext, application: A
     google_reports_api = context.resources.google_reports_api
     state_file = context.resources.state_file
 
+    # 0) Load last run cursor
     last_run = state_file.load_last_run(application)
     now = datetime.now(timezone.utc)
     run_id = now.strftime("%Y%m%dT%H%M%S")
@@ -98,7 +99,7 @@ def _run_raw_activity_incremental(context: AssetExecutionContext, application: A
 
             results.append(res)
 
-    # Write per-run snapshot if enabled
+    # 3) Write per-run snapshot if enabled
     if settings.WRITE_SNAPSHOT:
         snapshot_path = settings.per_run_data_dir / application.value.lower() / f"snapshot_{run_id}.json"
         snapshot_path.parent.mkdir(parents=True, exist_ok=True)
@@ -114,7 +115,7 @@ def _run_raw_activity_incremental(context: AssetExecutionContext, application: A
         )
         write_run_snapshot(snapshot, snapshot_path)
 
-    # 3) Update cursor only after full success of this incremental run
+    # 4) Update cursor only after full success of this incremental run
     if latest_event_time_global is not None:
         state_file.save_last_run(latest_event_time_global, application, run_id=run_id, snapshot_path=snapshot_path)
         context.log.info(
@@ -122,7 +123,7 @@ def _run_raw_activity_incremental(context: AssetExecutionContext, application: A
             " incremental run."
         )
 
-    # 4) Emit metadata for observability
+    # 5) Emit metadata for observability
     context.add_output_metadata(
         {
             "application": MetadataValue.text(application.value),
@@ -148,7 +149,7 @@ def make_incremental_asset(app: Application):
         required_resource_keys={"google_reports_api", "state_file"},
         group_name="Ingestion",
         description=f"Incrementally fetches {app.value} activity and writes raw JSONL files.",
-        compute_kind="python",
+        kinds=["python"],
     )
     def _asset(context: AssetExecutionContext):
         _run_raw_activity_incremental(context, app)

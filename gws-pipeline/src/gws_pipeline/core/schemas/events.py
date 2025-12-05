@@ -123,16 +123,19 @@ class BaseActivity(BaseModel):
         return None
 
     def _parse_timestamp(self) -> datetime:
+        """Parse the activity timestamp into a datetime object."""
         ts_raw = self._get_field(self.id, "time")
         # Example: "2025-11-27T03:11:11.616Z"
         # Normalize "Z" to "+00:00" for fromisoformat.
         return datetime.fromisoformat(ts_raw.replace("Z", "+00:00"))
 
     def _first_event(self) -> Optional[Event]:
+        """Return the first event in the activity, or None if no events."""
         return self.events[0] if self.events else None
 
     @staticmethod
     def _param_value(param: EventParameter) -> Any:
+        """Extract the value from an EventParameter, handling different types."""
         if param.bool_value is not None:
             return param.bool_value
         if param.int_value is not None:
@@ -145,6 +148,7 @@ class BaseActivity(BaseModel):
 
     @staticmethod
     def _param_lookup(event: Optional[Event]) -> Dict[str, EventParameter]:
+        """Build a name → EventParameter lookup from an event."""
         if not event:
             return {}
         return {p.name: p for p in event.parameters}
@@ -176,6 +180,7 @@ class BaseActivity(BaseModel):
         return BaseActivity._param_value(param) if param is not None else default
 
     def _base_record(self, event: Optional[Event]) -> Dict[str, Any]:
+        """Base flattening common to all audit events."""
         app_info = self._get_field(self.actor, "application_info", "applicationInfo")
         base: Dict[str, Any] = {
             "timestamp": self._parse_timestamp(),
@@ -431,6 +436,7 @@ class RawTokenActivity(BaseActivity):
     def _make_scope_record(
         self, timestamp: datetime, unique_id: str, scope_name: str, product_bucket: Optional[str]
     ) -> Dict[str, Any]:
+        """Build a single scope record dict."""
         family, _ = self._extract_scope_family(scope_name)
         service = self._derive_service(scope_name, product_bucket)
         return {
