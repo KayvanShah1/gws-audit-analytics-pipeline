@@ -7,7 +7,7 @@ from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# from rich.logging import RichHandler
+from rich.logging import RichHandler
 
 
 class AppSettings(BaseSettings):
@@ -80,10 +80,10 @@ def get_logger(name):
         logger.propagate = False
 
         # Console handler (Rich)
-        # ch = RichHandler(rich_tracebacks=True)
-        # ch.setLevel(logging.DEBUG)
-        # ch.setFormatter(logging.Formatter("'%(name)s' - %(message)s"))
-        # logger.addHandler(ch)
+        ch = RichHandler(rich_tracebacks=True)
+        ch.setLevel(logging.DEBUG)
+        ch.setFormatter(logging.Formatter("'%(name)s' - %(message)s"))
+        logger.addHandler(ch)
 
         # File handler (Rotating)
         fh = logging.handlers.RotatingFileHandler(
