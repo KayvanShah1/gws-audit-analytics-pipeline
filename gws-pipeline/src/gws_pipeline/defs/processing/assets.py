@@ -2,7 +2,7 @@ from dagster import AssetExecutionContext, AssetKey, asset
 
 from gws_pipeline.core import settings
 from gws_pipeline.core.schemas.fetcher import Application
-from gws_pipeline.core.process.with_polars_v2 import process_recent_activity
+from gws_pipeline.core.process.with_polars import process_recent_activity
 
 
 def make_processing_asset(app: Application):

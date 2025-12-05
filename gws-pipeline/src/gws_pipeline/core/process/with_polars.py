@@ -11,6 +11,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from gws_pipeline.core.config import get_logger, settings
+from gws_pipeline.core.schemas.parquet_schemas import EVENT_SCHEMA_BY_APP, SCOPE_SCHEMA_BY_APP
 from gws_pipeline.core.schemas.events import (
     BaseActivity,
     RawAdminActivity,
@@ -140,12 +141,14 @@ def _earliest_partition_datetime(app: Application) -> Optional[datetime]:
     return earliest
 
 
-def _write_parquet(partitions: Dict[str, List[dict]], out_dir: Path, prefix: str) -> None:
+def _write_parquet(
+    partitions: Dict[str, List[dict]], out_dir: Path, prefix: str, schema: pa.Schema | None = None
+) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     for date_key, rows in partitions.items():
         if not rows:
             continue
-        table = pa.Table.from_pylist(rows)
+        table = pa.Table.from_pylist(rows, schema=schema) if schema else pa.Table.from_pylist(rows)
         out_path = out_dir / f"{prefix}_{date_key}.parquet"
         pq.write_table(table, out_path, compression="snappy")
         logger.info(f"Wrote {len(rows)} rows to {out_path.relative_to(settings.base_dir)}")
@@ -213,13 +216,15 @@ def _iter_date_batches(start: date, end: date, batch_days: int) -> Iterable[Tupl
 def _write_event_partitions(app: Application, events: List[dict]) -> None:
     partitions = _partition_by_date(events)
     event_dir = settings.processed_data_dir / app.value.lower() / "events"
-    _write_parquet(partitions, event_dir, "events")
+    schema = EVENT_SCHEMA_BY_APP.get(app)
+    _write_parquet(partitions, event_dir, "events", schema=schema)
 
 
 def _write_scope_partitions(app: Application, scopes: List[dict]) -> int:
     partitions = _partition_by_date(scopes)
     scope_dir = settings.processed_data_dir / app.value.lower() / "event_scopes"
-    _write_parquet(partitions, scope_dir, "event_scopes")
+    schema = SCOPE_SCHEMA_BY_APP.get(app)
+    _write_parquet(partitions, scope_dir, "event_scopes", schema=schema)
     return sum(len(v) for v in partitions.values())
 
 
@@ -323,4 +328,4 @@ if __name__ == "__main__":
     # for app in Application:
     #     process_recent_activity(app)
 
-    process_recent_activity(Application.SAML)
+    process_recent_activity(Application.ADMIN)
