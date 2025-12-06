@@ -37,6 +37,7 @@ dependencies = [
 dev = [
     "dagster-dg-cli>=1.12.1",
     "dagster-webserver>=1.12.1",
+    "ipykernel>=7.1.0",
     "pytest>=9.0.0",
 ]
 
@@ -56,3 +57,6 @@ root_module = "gws_pipeline"
 registry_modules = [
     "gws_pipeline.components.*",
 ]
+
+[tool.sqlfmt]
+exclude=["target/**/*", "dbt_packages/**/*", ".venv/"]
