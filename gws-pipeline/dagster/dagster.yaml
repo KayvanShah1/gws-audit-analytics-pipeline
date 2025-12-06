@@ -6,6 +6,7 @@ python_logs:
         - StateStore
         - TokenActivityAnalyzer
         - GWSSettings
+        - IncrementalLoader
     python_log_level: DEBUG
     dagster_handler_config:
         handlers:
