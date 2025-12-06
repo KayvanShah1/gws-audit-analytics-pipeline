@@ -49,6 +49,9 @@ class AppSettings(BaseSettings):
     MOTHERDUCK_TOKEN: str = Field(..., description="MotherDuck authentication token")
     MOTHERDUCK_DB_NAME: str = Field(..., description="MotherDuck database name")
 
+    # DuckDB Schema
+    DUCKDB_LOADER_SCHEMA: str = Field("processed", description="DuckDB schema for loader tables")
+
     # Google Workspace API settings
     base_url: str = Field("https://www.googleapis.com", description="Base URL for Google Workspace API")
     subject: str = Field(..., description="Subject email for impersonation in API requests")
