@@ -10,7 +10,7 @@ def make_processing_asset(app: Application):
 
     @asset(
         name=f"{app.value.lower()}_process",
-        group_name="Processing",
+        group_name="light_transform",
         deps=[AssetKey(f"{app.value.lower()}_raw_inc")],
         description=f"Processes {app.value} raw JSONL into Parquet events (and scopes for token).",
         kinds=["python", "polars"],
