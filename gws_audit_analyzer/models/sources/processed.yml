@@ -1,0 +1,12 @@
+version: 1
+sources:
+    - name: processed
+      schema: "{{ target.schema }}" # processed
+      # database: "{{ target.database }}"  # optional for DuckDB/MotherDuck; include if you set one
+      tables:
+          - name: token_events
+          - name: token_event_scopes
+          - name: login_events
+          - name: saml_events
+          - name: admin_events
+          - name: drive_events
