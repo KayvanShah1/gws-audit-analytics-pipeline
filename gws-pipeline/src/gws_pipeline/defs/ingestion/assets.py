@@ -3,8 +3,9 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from dagster import AssetExecutionContext, MetadataValue, asset
+from dagster import AssetExecutionContext, AssetKey, MetadataValue, asset
 from gws_pipeline.core import settings
+from gws_pipeline.core.db_loader import load_app
 from gws_pipeline.core.fetcher import (
     fetch_window_to_files,
     split_time_range,
@@ -13,6 +14,10 @@ from gws_pipeline.core.fetcher import (
     Window,
 )
 from gws_pipeline.core.schemas.fetcher import Application, RunSnapshot, WindowRange
+
+# --------------------------------------------------------------------------
+# Incremental Assets for Fetching Raw Activity Data
+# --------------------------------------------------------------------------
 
 
 @dataclass
@@ -25,7 +30,16 @@ class WindowResult:
     latest_event_time: Optional[datetime]
 
 
-def _run_raw_activity_incremental(context: AssetExecutionContext, application: Application) -> None:
+def _run_fetch_raw_activity_incremental(context: AssetExecutionContext, application: Application) -> None:
+    """Runs an incremental fetch of raw activity for the given application. Chunks the time range since the last
+    successful run into smaller windows, fetches each window in parallel, writes raw JSONL files, and updates the last
+    run cursor upon successful completion. If enabled, writes a per-run snapshot file containing metadata about the run.
+    Metadata about the run is also emitted for observability.
+
+    Args:
+        context (AssetExecutionContext): The Dagster asset execution context.
+        application (Application): The application to fetch activity for.
+    """
     google_reports_api = context.resources.google_reports_api
     state_file = context.resources.state_file
 
@@ -143,18 +157,40 @@ def _run_raw_activity_incremental(context: AssetExecutionContext, application: A
     context.log.info(f"[{application.value}] Incremental fetch completed: {total_events} events fetched in total.")
 
 
-def make_incremental_asset(app: Application):
+def make_incremental_fetcher_asset(app: Application):
     @asset(
         name=f"{app.value.lower()}_raw_inc",
         required_resource_keys={"google_reports_api", "state_file"},
-        group_name="Ingestion",
+        group_name="raw_fetch",
         description=f"Incrementally fetches {app.value} activity and writes raw JSONL files.",
         kinds=["python"],
     )
     def _asset(context: AssetExecutionContext):
-        _run_raw_activity_incremental(context, app)
+        _run_fetch_raw_activity_incremental(context, app)
 
     return _asset
 
 
-incremental_assets = [make_incremental_asset(app) for app in Application]
+# --------------------------------------------------------------------------
+# Incremental Assets for Loading Processed Activity Data into DuckDB
+# --------------------------------------------------------------------------
+def make_incremental_loader_asset(app: Application):
+    @asset(
+        name=f"{app.value.lower()}_load_inc",
+        required_resource_keys={"duckdb_motherduck"},
+        deps=[AssetKey(f"{app.value.lower()}_process")],
+        group_name="warehouse_publish",
+        description=f"Loads incrementally processed {app.value} activity data into DuckDB.",
+        kinds=["python", "duckdb"],
+    )
+    def _asset(context: AssetExecutionContext):
+        with context.resources.duckdb_motherduck.get_connection() as conn:
+            latest = load_app(conn, app)
+        context.log.info(f"[{app.value}] DuckDB load complete; latest ts={latest}")
+
+    return _asset
+
+
+# Create incremental assets for each application
+incremental_fetcher_assets = [make_incremental_fetcher_asset(app) for app in Application]
+incremental_loader_assets = [make_incremental_loader_asset(app) for app in Application]
