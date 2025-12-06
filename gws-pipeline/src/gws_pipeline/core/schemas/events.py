@@ -193,7 +193,7 @@ class BaseActivity(BaseModel):
             "oauth_client_id": self._get_field(app_info, "oauth_client_id", "oauthClientId"),
             "oauth_app_name": self._get_field(app_info, "application_name", "applicationName"),
             "impersonation": self._get_field(app_info, "impersonation"),
-            "ip": self.ip_address,
+            "ip_address": self.ip_address,
             "asn": None,
             "asn_list": None,
             "region_code": None,
