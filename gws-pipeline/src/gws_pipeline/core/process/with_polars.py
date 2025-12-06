@@ -363,5 +363,3 @@ def process_recent_activity(app: Application, hours: int = settings.DEFAULT_DELT
 if __name__ == "__main__":
     for app in Application:
         process_recent_activity(app)
-
-    # process_recent_activity(Application.SAML)
