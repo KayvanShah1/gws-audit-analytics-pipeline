@@ -249,6 +249,6 @@ if __name__ == "__main__":
             load_app(con, app)
 
         # Example: load only SAML
-        # load_app(con, Application.DRIVE)
+        # load_app(con, Application.SAML)
     finally:
         con.close()

@@ -220,6 +220,11 @@ class BaseActivity(BaseModel):
         return self._strip_excluded_fields(record)
 
 
+# application_name   → log type (e.g., "token")
+# oauth_app_name     → OAuth client of actor (optional)
+# app_name           → app accessing data (Token) or SAML SP (SAML)
+
+
 # --- Token activity (scope-heavy) ---
 class RawTokenActivity(BaseActivity):
     """
@@ -547,7 +552,7 @@ class RawSamlActivity(BaseActivity):
             {
                 "orgunit_path": self._get_param(params, "orgunit_path"),
                 "initiated_by": self._get_param(params, "initiated_by"),
-                "application_name": self._get_param(params, "application_name"),
+                "app_name": self._get_param(params, "application_name"),
                 "saml_status_code": self._get_param(params, "saml_status_code"),
                 "saml_second_level_status_code": self._get_param(params, "saml_second_level_status_code"),
                 "saml_failure_type": self._get_param(params, "failure_type"),
@@ -571,7 +576,7 @@ if __name__ == "__main__":
     from gws_pipeline.core import settings
     from gws_pipeline.core.schemas.fetcher import Application
 
-    APP_NAME = "TOKEN"  # TOKEN, login, saml, admin, drive
+    APP_NAME = "saml"  # TOKEN, login, saml, admin, drive
     START_AT = 0  # offset into items list (useful when scopes appear later in the sample)
     SAMPLE_LIMIT = 10  # set to an int to cap how many items to flatten
     SAMPLE_FILE = settings.base_dir / "input" / "example_response_token_2.json"

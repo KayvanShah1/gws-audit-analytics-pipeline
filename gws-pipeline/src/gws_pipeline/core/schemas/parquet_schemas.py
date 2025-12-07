@@ -177,7 +177,7 @@ SAML_EVENT_SCHEMA = _schema(
     [
         "timestamp",
         "unique_id",
-        "application_name",
+        "app_name",
         "customer_id",
         "actor_email",
         "actor_profile_id",
