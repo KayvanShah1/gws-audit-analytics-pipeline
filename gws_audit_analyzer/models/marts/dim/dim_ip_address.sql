@@ -56,4 +56,3 @@ select
 from candidates
 where ip_address is not null
 group by ip_address
-;
