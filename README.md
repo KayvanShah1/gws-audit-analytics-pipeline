@@ -28,7 +28,6 @@ This project implements a fully **incremental**, **overlap-safe** pipeline for i
 - **Rich logging** in `var/logs/gws-activity-analyzer.log` and Dagster event logs -- use these for up-to-date timings and row counts instead of static benchmarks.
 
 ## Project Architecture
-
 ### A High Level View
 ```mermaid
 ---
@@ -94,8 +93,25 @@ flowchart LR
   p3 --> dw
   model -.-> dw
 
-
 ```
+### Detailed Components
+Here is how ingest and modeling jobs are orchestrated through Dagster.
+<details>
+  <summary><strong>📦 GWS Ingestion Job Diagram</strong></summary>
+  <br>
+  <p align="center">
+    <img src="docs/assets/Job_gws_ingestion_job.svg" width="80%" />
+  </p>
+</details>
+
+<details>
+  <summary><strong>📊 DBT Models Build Job</strong></summary>
+  <br>
+  <p align="center">
+    <img src="docs/assets/Job_job_build_dbt_models.svg" width="80%" />
+  </p>
+</details>
+
 
 ## Pipeline Stages
 
@@ -219,6 +235,14 @@ Run from the repo root:
 cd gws-pipeline
 uv run python scripts/reset.py
 ```
+### Tech Stack
+![Dagster](https://img.shields.io/badge/Dagster-000000?style=for-the-badge&logo=dagster&logoColor=white)
+![dbt](https://img.shields.io/badge/dbt-FF694B?style=for-the-badge&logo=dbt&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![SQL](https://img.shields.io/badge/SQL-336791?style=for-the-badge&logo=databricks&logoColor=white)
+![DuckDB](https://img.shields.io/badge/DuckDB-FFF000?style=for-the-badge&logo=duckdb&logoColor=black)
+![MotherDuck](https://img.shields.io/badge/MotherDuck-1F1F1F?style=for-the-badge&logo=motherduck&logoColor=yellow)
+![Polars](https://img.shields.io/badge/Polars-4B8BBE?style=for-the-badge&logo=python&logoColor=white)
 
 ## Authors
 [Kayvan Shah](https://github.com/KayvanShah1) | `MS in Applied Data Science` | `USC`
