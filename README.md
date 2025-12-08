@@ -2,7 +2,7 @@
 
 This project implements a fully **incremental**, **overlap-safe** pipeline for ingesting and analyzing `Google Workspace Admin Reports` audit activity. It provides reliable end-to-end handling of application events, transforming noisy, latency-prone API responses into structured analytics tables orchestrated through `Dagster` and modeled with `dbt`.
 
-![Image](https://logpresso.store/media/apps/google-workspace/featured.png)
+![Image](docs/assets/cover.jpg)
 
 ## Background & Overview
 
