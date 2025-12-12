@@ -18,7 +18,7 @@ select
     event_type,
     event_name,
     resource_detail_count,
-    app_name as ouath_app_name,
+    saml_sp_name,
     orgunit_path,
     initiated_by,
     saml_status_code,
