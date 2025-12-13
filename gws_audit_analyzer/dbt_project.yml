@@ -43,3 +43,10 @@ models:
             +meta:
                 dagster:
                     group: marts
+
+        reporting:
+            +materialized: view
+            +schema: reporting
+            +meta:
+                dagster:
+                    group: reporting
