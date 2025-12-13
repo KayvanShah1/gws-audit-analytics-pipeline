@@ -17,7 +17,6 @@ select
     subdivision_code,
     event_type,
     event_name,
-    resource_detail_count,
     saml_sp_name,
     orgunit_path,
     initiated_by,

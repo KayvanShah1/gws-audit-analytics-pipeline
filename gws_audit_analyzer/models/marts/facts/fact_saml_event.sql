@@ -48,9 +48,6 @@ with
             b.region_code,
             b.subdivision_code,
 
-            -- measures
-            b.resource_detail_count,
-
             -- SAML-specific attributes
             b.orgunit_path,
             b.initiated_by,
