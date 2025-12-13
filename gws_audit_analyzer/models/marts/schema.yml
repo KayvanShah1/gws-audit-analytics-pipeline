@@ -44,3 +44,92 @@ models:
         tests: [not_null]
       - name: timestamp
         tests: [not_null]
+
+  - name: fact_admin_actions_daily
+    columns:
+      - name: admin_day_key
+        tests: [not_null, unique]
+      - name: event_date
+        tests: [not_null]
+
+  - name: fact_geo_activity_daily
+    columns:
+      - name: geo_day_key
+        tests: [not_null, unique]
+      - name: event_date
+        tests: [not_null]
+
+  - name: fact_scope_risk_daily
+    columns:
+      - name: scope_risk_day_key
+        tests: [not_null, unique]
+      - name: event_date
+        tests: [not_null]
+
+  - name: dq_app_event_gaps
+    columns:
+      - name: app_id
+        tests: [not_null]
+      - name: event_date
+        tests: [not_null]
+
+  - name: fact_event_volume_hourly
+    columns:
+      - name: app_hour_key
+        tests: [not_null, unique]
+      - name: event_hour
+        tests: [not_null]
+
+  - name: fact_scope_cooccurrence_daily
+    columns:
+      - name: scope_pair_day_key
+        tests: [not_null, unique]
+      - name: event_date
+        tests: [not_null]
+
+  - name: fact_admin_action_breakdown_daily
+    columns:
+      - name: admin_breakdown_day_key
+        tests: [not_null, unique]
+      - name: event_date
+        tests: [not_null]
+
+  - name: dq_duplicate_events_daily
+    columns:
+      - name: event_date
+        tests: [not_null]
+      - name: source
+        tests: [not_null]
+
+  - name: fact_geo_new_regions
+    columns:
+      - name: user_key
+        tests: [not_null]
+      - name: region_code
+        tests: [not_null]
+
+  - name: fact_user_activity_baseline
+    columns:
+      - name: user_baseline_day_key
+        tests: [not_null, unique]
+      - name: user_key
+        tests: [not_null]
+      - name: event_date
+        tests: [not_null]
+      - name: total_events
+        tests: [not_null]
+      - name: total_bytes
+        tests: [not_null]
+
+  - name: fact_app_activity_baseline
+    columns:
+      - name: app_baseline_day_key
+        tests: [not_null, unique]
+      - name: app_id
+        tests: [not_null]
+      - name: event_date
+        tests: [not_null]
+      - name: total_events
+        tests: [not_null]
+      - name: total_bytes
+        tests: [not_null]
