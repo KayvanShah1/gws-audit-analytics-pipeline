@@ -3,10 +3,9 @@ sources:
     - name: cleaned
       schema: "{{ target.schema }}" # processed
       # database: "{{ target.database }}"  # optional for DuckDB/MotherDuck; include if you set one
-      config:
-          meta:
-              dagster:
-                  group: cleaned
+      meta:
+          dagster:
+              group: cleaned
       tables:
           - name: token_events
           - name: token_event_scopes
