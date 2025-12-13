@@ -44,6 +44,13 @@ models:
                 dagster:
                     group: marts
 
+            aggregates:
+                +materialized: table
+                +schema: marts
+                +meta:
+                    dagster:
+                        group: aggregates
+
         reporting:
             +materialized: view
             +schema: reporting
