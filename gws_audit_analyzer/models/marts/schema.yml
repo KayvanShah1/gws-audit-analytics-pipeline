@@ -1,0 +1,46 @@
+version: 2
+
+models:
+  - name: fact_admin_event
+    columns:
+      - name: unique_id
+        tests: [not_null, unique]
+      - name: timestamp
+        tests: [not_null]
+
+  - name: fact_login_event
+    columns:
+      - name: unique_id
+        tests: [not_null, unique]
+      - name: timestamp
+        tests: [not_null]
+
+  - name: fact_drive_event
+    columns:
+      - name: unique_id
+        tests: [not_null, unique]
+      - name: timestamp
+        tests: [not_null]
+
+  - name: fact_saml_event
+    columns:
+      - name: unique_id
+        tests: [not_null, unique]
+      - name: timestamp
+        tests: [not_null]
+
+  - name: fact_token_event
+    columns:
+      - name: unique_id
+        tests: [not_null, unique]
+      - name: timestamp
+        tests: [not_null]
+
+  - name: fact_token_scope
+    columns:
+      - name: unique_id
+        tests: [not_null]
+      - name: scope_name
+        tests: [not_null]
+      - name: timestamp
+        tests: [not_null]
