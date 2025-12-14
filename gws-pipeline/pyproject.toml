@@ -5,7 +5,14 @@ description = "Google Workspace Token Activity Audit Pipeline"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
-keywords = ["google workspace", "dagster", "data pipeline", "audit", "token activity", "dbt"]
+keywords = [
+    "google workspace",
+    "dagster",
+    "data pipeline",
+    "audit",
+    "token activity",
+    "dbt",
+]
 authors = [{ name = "Kayvan Shah", email = "kayvan.taiyo@gmail.com" }]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -39,6 +46,7 @@ dev = [
     "dagster-webserver>=1.12.1",
     "ipykernel>=7.1.0",
     "pytest>=9.0.0",
+    "ruff>=0.14.9",
 ]
 
 [build-system]
@@ -54,9 +62,20 @@ directory_type = "project"
 
 [tool.dg.project]
 root_module = "gws_pipeline"
-registry_modules = [
-    "gws_pipeline.components.*",
-]
+registry_modules = ["gws_pipeline.components.*"]
 
 [tool.sqlfmt]
-exclude=["target/**/*", "dbt_packages/**/*", ".venv/"]
+exclude = ["target/**/*", "dbt_packages/**/*", ".venv/"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = 120
+quote-style = "double"
+
+[tool.ruff.lint.pycodestyle]
+# But override the linter's enforced line length to 10.
+max-line-length = 120
