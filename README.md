@@ -28,72 +28,9 @@ This project implements a fully **incremental**, **overlap-safe** pipeline for i
 - **Rich logging** in `var/logs/gws-activity-analyzer.log` and Dagster event logs -- use these for up-to-date timings and row counts instead of static benchmarks.
 
 ## Project Architecture
-### A High Level View
-```mermaid
----
-config:
-  theme: neo-dark
-  look: neo
-  layout: elk
-  markdownAutoWrap: false
----
-flowchart LR
-  s[[Google Admin Reports API]]
+### A High-Level View
+<img width="3562" height="1762" alt="gws_arch" src="https://github.com/user-attachments/assets/4b9e8f04-5405-464a-b25d-e4d6a7ebb1e8" />
 
-  %% Dagster Orchestration
-  subgraph dagster["Dagster Orchestration"]
-    direction LR
-
-    sched["Schedule<br>@ every 48h"]
-    sensor(("Sensor<br>Success Run"))
-
-    %% Incremental ETL
-    subgraph incremental["Incremental ETL Connector"]
-      p1["Fetch (Windowed + Overlap)"]
-      p2["Process (Validate • Dedupe • Normalize)"]
-      p3["Load (Incremental Publish)"]
-    end
-
-    %% Modelling
-    subgraph model["dbt Models"]
-      s1["Processed (Sources)"]
-      s2["Staging (Event Tables)"]
-      s3["Marts (Facts • Dimensions)"]
-      s4["Reporting (Aggregates)"]
-    end
-  end
-
-  %% Metadata
-  subgraph metadata["Metadata Store"]
-    state["State Checkpoints"]
-    snapshots["Run Snapshots"]
-  end
-
-  %% Storage
-  subgraph storage["Data Lake"]
-    raw["Raw JSONL (.gz)"]
-    parquet["Parquet (Daily Partitions)"]
-  end
-
-  %% Warehouse + BI
-  dw[("MotherDuck<br>(DuckDB Warehouse)")]
-  bi[["BI Dashboard"]]
-
-  %% Main flow
-  s --> p1 --> p2 --> p3 --> s1 --> s2 --> s3 --> s4 --> bi
-
-  %% Dagster control edges
-  sched --> p1
-  incremental -.-> sensor -.-> model
-
-  %% Side links
-  incremental -.-> metadata
-  incremental -.-> storage
-  storage -.-> dw
-  p3 --> dw
-  model -.-> dw
-
-```
 ### Detailed Components
 Here is how ingest and modeling jobs are orchestrated through Dagster.
 <details>
